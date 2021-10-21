@@ -10,7 +10,7 @@ print("getting started")
 print(__file__)
 from shutil import copyfile,copy2
 import os
-example_folder = os.path.dirname(__file__)+"/../examples/"
+example_folder = os.path.dirname(__file__)+"/examples/"
 print(example_folder)
 file_example_remote_object =    "example_remote_object.py"
 file_example_server =           "example_server.py"
