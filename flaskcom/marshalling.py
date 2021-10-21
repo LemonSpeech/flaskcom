@@ -76,9 +76,13 @@ class Marshaller(object):
             # If we have a remote adress given as localhost, we look locally for the folder
             if not self.__check_remote_for_file(abs_file_path=path_to_virtualenv_absolute, server_adress=server_adress):
 
-                print("virtualenv not found:")
+                print("virtualenv not found on the server at:")
                 print(path_to_virtualenv_absolute)
                 raise Exception
+            else:
+                print("virtualenv found on the server at:")
+                print(path_to_virtualenv_absolute)
+                #raise Exception
         virtualenv_source_command = ""
         if path_to_virtualenv != "":
             virtualenv_source_command = ". "+path_to_virtualenv_absolute+";"
@@ -244,43 +248,43 @@ class Marshaller(object):
 
         export_command = []
 
-        verified_flaskcom_path = ""
-        if self.verbosity_level<1:
-            print("trying to find flaskcom on the remote server")
-            print("searching in flaskcom path: ",flaskcom_path)
-        if flaskcom_path=="":
-            print("flaskcom path was not specified")
-        elif not self.__check_remote_for_directory(flaskcom_path, server):
-            print("flaskcom path does not exist")
-            print("please check if the flaskcom path is correct")
-            raise Exception
-        elif self.__check_remote_for_file(flaskcom_path+"/flaskcom/remote_object.py", server):
-            
-            verified_flaskcom_path = os.path.abspath(flaskcom_path+"/flaskcom/")
-            if self.verbosity_level<1:print("flaskcom found at", verified_flaskcom_path)
-        elif self.__check_remote_for_file(flaskcom_path+"/remote_object.py", server):
-            verified_flaskcom_path = os.path.abspath(flaskcom_path)
-            if self.verbosity_level<1:print("flaskcom found at", verified_flaskcom_path)
-        else:
-            if self.verbosity_level<1:
-                print("flaskcom not found in flaskcom path")
-            # raise Exception
-        if verified_flaskcom_path == "":
-            if self.verbosity_level<1: print("searching in working directory: ",original_working_directory)
-            if original_working_directory=="":
-                print("working directory path was not specified")
-            elif not self.__check_remote_for_directory(original_working_directory, server):
-                print("working directory does not exist")
-                print("please check if the working directory is correct")
-                raise Exception
-            elif self.__check_remote_for_directory(original_working_directory+"/flaskcom/remote_object.py", server):
-                verified_flaskcom_path = os.path.abspath(flaskcom_path+"/flaskcom/")
-                print("flaskcom found at", verified_flaskcom_path)
-            elif self.__check_remote_for_file(original_working_directory+"/remote_object.py", server):
-                verified_flaskcom_path = os.path.abspath(flaskcom_path)
-                print("flaskcom found at", verified_flaskcom_path)
-            else:
-                print("flaskcom not found in working directory")
+#        verified_flaskcom_path = ""
+#        if self.verbosity_level<1:
+#            print("trying to find flaskcom on the remote server")
+#            print("searching in flaskcom path: ",flaskcom_path)
+#        if flaskcom_path=="":
+#            print("flaskcom path was not specified")
+#        elif not self.__check_remote_for_directory(flaskcom_path, server):
+#            print("flaskcom path does not exist")
+#            print("please check if the flaskcom path is correct")
+#            raise Exception
+#        elif self.__check_remote_for_file(flaskcom_path+"/flaskcom/remote_object.py", server):
+#            
+#            verified_flaskcom_path = os.path.abspath(flaskcom_path+"/flaskcom/")
+#            if self.verbosity_level<1:print("flaskcom found at", verified_flaskcom_path)
+#        elif self.__check_remote_for_file(flaskcom_path+"/remote_object.py", server):
+#            verified_flaskcom_path = os.path.abspath(flaskcom_path)
+#            if self.verbosity_level<1:print("flaskcom found at", verified_flaskcom_path)
+#        else:
+#            if self.verbosity_level<1:
+#                print("flaskcom not found in flaskcom path")
+#            # raise Exception
+#        if verified_flaskcom_path == "":
+#            if self.verbosity_level<1: print("searching in working directory: ",original_working_directory)
+#            if original_working_directory=="":
+#                print("working directory path was not specified")
+#            elif not self.__check_remote_for_directory(original_working_directory, server):
+#                print("working directory does not exist")
+#                print("please check if the working directory is correct")
+#                raise Exception
+#            elif self.__check_remote_for_directory(original_working_directory+"/flaskcom/remote_object.py", server):
+#                verified_flaskcom_path = os.path.abspath(flaskcom_path+"/flaskcom/")
+#                print("flaskcom found at", verified_flaskcom_path)
+#            elif self.__check_remote_for_file(original_working_directory+"/remote_object.py", server):
+#                verified_flaskcom_path = os.path.abspath(flaskcom_path)
+#                print("flaskcom found at", verified_flaskcom_path)
+#            else:
+#                print("flaskcom not found in working directory")
     
                 # raise Exception
 
@@ -324,12 +328,12 @@ class Marshaller(object):
             debug_command = ";$SHELL"    
         return debug_command
         
-    def start_server_terminal(self, command, meta_function, time_out):
+    def start_server_terminal(self, command, meta_function, time_out, wait_for_errors):
 
         if self.verbosity_level<1:
             print("running:")
             print(command)
-            print("checking if remote object is already running:")
+            #print("checking if remote object is already running:")
         counter = 0
         def check_status(counter):
             if self.verbosity_level<1: print("checking status")
@@ -351,7 +355,25 @@ class Marshaller(object):
                 if self.verbosity_level<1: print(".",)
             time.sleep(1)
             return isup
-        terminal = subprocess.Popen(command, stdin=subprocess.PIPE, shell=True)
+        terminal = subprocess.Popen(command, stdin=subprocess.PIPE, shell=True, stderr=subprocess.PIPE)
+        print("wating for",wait_for_errors,"seconds if the start fails")
+        try:
+            
+            out, err = terminal.communicate(timeout=wait_for_errors)
+            errcode = terminal.returncode
+            if errcode == 0:
+                print("the process return with code 0")
+                print("everything seems ok")
+            else:
+                print("the process ended with:")
+                print("out",out)
+                print("err",err)
+                print("errcode",errcode)
+                raise Exception
+        except subprocess.TimeoutExpired:
+            print("the server didnt stop since",wait_for_errors,"seconds, looks like it is running")
+        print("started process on the server")
+
         if time_out != -1:
             if self.verbosity_level<1:print("will try", time_out, "times to connect to the remote object")
             for _ in range(time_out):

@@ -24,6 +24,9 @@ import sys
 from .errorprint import print_error
 from .marshalling import Marshaller
 
+VERBOSITY_ERROR = 1
+VERBOSITY_INFO = 0
+
 
 def get_methods_without_import(wrapped_module, wrapped_class):
     import pkgutil
@@ -77,10 +80,11 @@ class RemoteObject(object):
                  time_out = 20, 
                  debug = False, 
                  start_server = True,
-                 verbosity_level = 1,
+                 verbosity_level = VERBOSITY_ERROR,
                  username = "default_user",
                  password = "default_password",
-                 new_terminal_window = True):
+                 new_terminal_window = True,
+                 wait_for_errors = 10):
 
         self.RO_server = server
         self.RO_port = port
@@ -93,6 +97,8 @@ class RemoteObject(object):
 
         self.RO_password = password
         self.RO_username = username
+        
+        self.RO_wait_for_errors = wait_for_errors
             
 #        dill.HIGHEST_PROTOCOL = 2
 #        dill.DEFAULT_PROTOCOL = 2
@@ -105,9 +111,7 @@ class RemoteObject(object):
 
 
 
-        if wrapped_function == None:
-            print("define wrapped_function")
-            raise NotImplementedError
+
 
         global current_object_id
         if self.RO_verbosity_level<1:
@@ -141,7 +145,9 @@ class RemoteObject(object):
             print (status == "down")
         if start_server:
             if status == "down":
-
+                if wrapped_function == None:
+                    print("define wrapped_function")
+                    raise NotImplementedError
                 virtualenv_source_command = self.RO_marshaller.get_virtualenv_command(path_to_virtualenv, server)
                 cd_command = self.RO_marshaller.get_cd_command(original_working_directory, server)
                 shell_command = self.RO_marshaller.get_shell_command(server)
@@ -171,7 +177,7 @@ class RemoteObject(object):
                     print(command)
                     print("running in")
                     print(cd_command)
-                self.RO_marshaller.start_server_terminal(command,self.RO_meta_function,time_out)
+                self.RO_marshaller.start_server_terminal(command,self.RO_meta_function,time_out,self.RO_wait_for_errors)
                 if self.RO_verbosity_level<1:print("server terminal started")
                 status2 = self.RO_meta_function("status") 
                 if self.RO_verbosity_level<1:print("server status:",status2)
@@ -182,6 +188,9 @@ class RemoteObject(object):
                 if wrapped_function != None:
                     if self.RO_verbosity_level<1:print("initializing wrapped function on the server")
                     self.RO_marshaller.init_server_with_wrapped_function_raw(wrapped_function,self.RO_meta_function)
+                else:
+                    print("wrapped_function needs to be given if start_server is True")
+                    raise Exception
                 
 
                     

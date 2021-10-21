@@ -371,7 +371,9 @@ class Server(object):
         self.app.run(host='0.0.0.0',port=self.port, debug=False, use_reloader=False, threaded=True)
     
     def stop(self):
-        self.app.shutdown()
+        print("shutting down the server, press ENTER")
+        #sys.exit(0)
+        #self.app.shutdown()
     
     def __del__(self):
         self.stop()
