@@ -1,0 +1,4 @@
+dill==0.2.9
+Flask==1.0.2
+requests==2.19.1
+Flask-Login==0.5.0
