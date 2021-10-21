@@ -45,7 +45,7 @@ def example_server():
     
     #creates the server object from the wrapped_function
     test_server = RemoteObject(wrapped_function = wrapped_function, #the function that initializes the remote object
-                               path_to_virtualenv = "../env3", #a virtualenv can loaded before exectuting the code in the remote terminal.
+                               path_to_virtualenv = "./env3", #a virtualenv can loaded before exectuting the code in the remote terminal.
                                server = "localhost", #must be localhost. this script can only be started when started from the server
                                #server = "localhost", #the remote object is on this computer
                                port=50000, # a port needs to be specified

@@ -45,7 +45,7 @@ def example_remote():
     #returns an object that can be used like the object initialized in the wrapped function,
     #here: test_object = ComplexTestClass('hallo')
     test_object = RemoteObject(wrapped_function = wrapped_function, #the function that initializes the remote object
-                               path_to_virtualenv = "../env3", #a virtualenv on the remote server can loaded before exectuting the code in the remote server.
+                               path_to_virtualenv = "./env3", #a virtualenv on the remote server can loaded before exectuting the code in the remote server.
                                server = "localhost", #the remote object, may be running on another computer, in this case it is the same computer
                                original_working_directory = ".", #a working directory can be specified, which can be used to search for the code
                                keep_open = True, #the remote object can be kept open, when the program is exectuted the next time, it will use the open remote object instead of creating a new one
