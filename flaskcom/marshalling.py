@@ -28,7 +28,12 @@ class Marshaller(object):
         
         self.port = port
         self.salt = "i_love_flask"
-    
+        
+        self.admins = []
+
+    def hash_password(self,password):
+        return binascii.hexlify( hashlib.pbkdf2_hmac('sha256',str.encode(password) , str.encode(self.salt), 100000))
+
     def authenticate(self):
         r= None
         
@@ -38,11 +43,13 @@ class Marshaller(object):
         if self.verbosity_level<1:print("url:",url)
         try:
             
-            login_data = {"username":self.user,"password": binascii.hexlify( hashlib.pbkdf2_hmac('sha256',str.encode(self.password) , str.encode(self.salt), 100000)) }
+            login_data = {"username":self.user,"password": self.hash_password(self.password) }
             r = self.session.post(url, data=login_data)
             if self.verbosity_level<1:print(r)
             if self.verbosity_level<1:print(r.content)
-            authenticated = True
+            if r.content != b'Bad login':
+                authenticated = True
+            #print(r.content)
         except Exception as err:
             if self.verbosity_level<1:
                 print ("connection was refused when authenticating, maybe server is not running")
@@ -238,7 +245,17 @@ class Marshaller(object):
         return command
 
     
-    def get_python_command_for_server_in_file(self, wrapped_function, server, port, flaskcom_path, original_working_directory, path_to_virtualenv, initial_user, initial_password):
+    def get_python_command_for_server_in_file(self, 
+                                              wrapped_function, 
+                                              server, 
+                                              port, 
+                                              flaskcom_path, 
+                                              original_working_directory, 
+                                              path_to_virtualenv, 
+                                              initial_user, 
+                                              initial_password,
+                                              admin_user,
+                                              reser_user_db):
         import inspect
         lines = inspect.getsource(wrapped_function).splitlines()
         for line in lines[1:]:
@@ -297,7 +314,10 @@ class Marshaller(object):
         password = binascii.hexlify( hashlib.pbkdf2_hmac('sha256',str.encode(initial_password), str.encode(self.salt), 100000))
         export_command.append("export FLASKCOM_INITIAL_PASSWORD="+ password.decode("utf-8"))
         export_command.append("export FLASKCOM_VERBOSITY="+str(self.verbosity_level))
+        export_command.append("export FLASKCOM_ADMIN_USER="+admin_user)
+        export_command.append("export FLASKCOM_RESET_USER_DB="+str(reser_user_db))
 
+   
         
         
         export_command = ";".join(export_command)

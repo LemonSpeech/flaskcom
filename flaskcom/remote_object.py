@@ -84,7 +84,9 @@ class RemoteObject(object):
                  username = "default_user",
                  password = "default_password",
                  new_terminal_window = True,
-                 wait_for_errors = 10):
+                 wait_for_errors = 10,
+                 admin_username = "",
+                 reser_user_db = True):
 
         self.RO_server = server
         self.RO_port = port
@@ -136,7 +138,8 @@ class RemoteObject(object):
             print("client is authenticated:",authenticated)
 
         status = self.RO_meta_function("status") 
-        if self.RO_verbosity_level<1:print("server status:",status)
+        if self.RO_verbosity_level<1:
+            print("server status:",status)
         if status == b"Unauthorized":
             print("server is running, but client is not authorized")
             authenticated = self.RO_authenticate()
@@ -157,7 +160,16 @@ class RemoteObject(object):
                 if wrapped_function != None:
 
                 
-                    python_command = self.RO_marshaller.get_python_command_for_server_in_file(wrapped_function,server,self.RO_port,flaskcom_path, original_working_directory, path_to_virtualenv, initial_user = self.RO_username, initial_password= self.RO_password)
+                    python_command = self.RO_marshaller.get_python_command_for_server_in_file(wrapped_function,
+                                                                                              server,
+                                                                                              self.RO_port,
+                                                                                              flaskcom_path, 
+                                                                                              original_working_directory, 
+                                                                                              path_to_virtualenv, 
+                                                                                              initial_user = self.RO_username, 
+                                                                                              initial_password= self.RO_password, 
+                                                                                              admin_user = admin_username,
+                                                                                              reser_user_db = reser_user_db)
 
                 debug_command = self.RO_marshaller.get_debug_command(debug)
 
@@ -191,12 +203,18 @@ class RemoteObject(object):
                 else:
                     print("wrapped_function needs to be given if start_server is True")
                     raise Exception
-                
+
 
                     
 
         elif status == "down":
             print_error( "the server is not reachable")
+            sys.exit(1)
+        elif status == "Unauthorized":
+            print_error( "user not authorized")
+            print("server is running, but client is not authorized")
+            print("maybe the credentials are wrong or the user is not registered")
+            raise ConnectionRefusedError
             sys.exit(1)
         
         if self.RO_verbosity_level<1:print("server should run")
@@ -206,10 +224,23 @@ class RemoteObject(object):
             print("keeping terminal open")
         else:
             self.RO_meta_function("shutdown")
+            
     def RO_authenticate(self):
         return self.RO_marshaller.authenticate()
-
-            
+    
+    def RO_add_user(self,user,password):
+        hashed_pw = repr(self.RO_marshaller.hash_password(password))[2:-1]
+        #print(hashed_pw)
+        paypload = "add_user\t"+user+"\t"+str(hashed_pw)
+        #print("adding user")
+        #print(paypload)
+        return self.RO_meta_function(paypload)
+    
+    def RO_spin(self):
+        print("spinning, use CTRL+C to stop")
+        while True:
+            input()
+    
     def RO_meta_function(self, payload):
         if self.RO_verbosity_level<1: print("calling RO_meta_function",payload[:20],"...")
         status = "False"

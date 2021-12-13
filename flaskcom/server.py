@@ -24,9 +24,10 @@ import importlib
 
 #users = ["hannes", "martin"]
 import flask, flask_login
+from pathlib import Path
+import pickle
 
-
-salt = "i_love_flask"
+salt = "i_love_flaskcom"
 # Our mock database.
 users = {}
 class User(flask_login.UserMixin):
@@ -34,7 +35,15 @@ class User(flask_login.UserMixin):
 
 
 class Server(object):
-    def __init__(self, wrapped_class, port, verbosity_level = 0, initial_user = "default_user", initial_password = "default_password"):
+    def __init__(self, wrapped_class, port, 
+                 verbosity_level = 0, initial_user = "default_user", 
+                 initial_password = "default_password", admin_user = "",
+                   reser_user_db = True):
+        
+        self.reser_user_db = reser_user_db
+        self.admin_user = admin_user
+        #self.no_admin = admin_user == ""
+        
         self.wrapped_class = wrapped_class
         self.port = port
 
@@ -47,7 +56,31 @@ class Server(object):
         self.login_manager = flask_login.LoginManager()
         self.login_manager.init_app(self.app)
         
-        users[initial_user] = {"password": initial_password}
+        
+        #users[initial_user] = {"password": str(initial_password)}
+        if reser_user_db == False and admin_user != "" and admin_user == initial_user:
+            admin_user_workspace = "./user_data/"+admin_user
+            Path(admin_user_workspace).mkdir(parents=True, exist_ok=True)
+            users_file =  admin_user_workspace+"/users.p"
+
+            if Path(users_file).is_file():
+                with open(users_file, "rb") as f:
+                    thismodule = sys.modules[__name__]
+                    thismodule.users = pickle.load(f)
+                users[initial_user] = {"password": str(initial_password)}
+                print("loaded users")
+                print(users)
+            else:
+                users[initial_user] = {"password": str(initial_password)}
+                with open(users_file, "wb") as f:
+                     pickle.dump(users,f)
+        else:
+            users[initial_user] = {"password": str(initial_password)}
+            if admin_user != "":
+                users[admin_user] = {"password": str(initial_password)}
+        
+        
+        
         if self.verbosity_level<1:
             print("found the following users")
             print(users)
@@ -92,17 +125,21 @@ class Server(object):
                        </form>
                        '''
         
-            email = flask.request.form['username']
+            username = flask.request.form['username']
             
             if self.verbosity_level<1:
                 print("a user tries to login:")
-                print(email)
+                print(username)
                 print("the following users are allowed:")
                 print(users)
             #stored_password_hash = binascii.hexlify( hashlib.pbkdf2_hmac('sha256',str.encode(users[initial_user]["password"]) , str.encode(salt), 100000))
 
             provided_password_hash = flask.request.form['password']
-            stored_password_hash = users[initial_user]["password"]
+            
+            if username in users.keys():
+                stored_password_hash = users[username]["password"]
+            else:
+                return 'Bad login'
             
             if self.verbosity_level<1:
                 print("comparing passwords:")
@@ -111,7 +148,7 @@ class Server(object):
                 print(stored_password_hash == provided_password_hash)
             if  stored_password_hash == provided_password_hash:
                 user = User()
-                user.id = email
+                user.id = username
                 flask_login.login_user(user)
                 return flask.redirect(flask.url_for('protected'))
         
@@ -242,6 +279,7 @@ class Server(object):
                 if func is None:
                     raise RuntimeError('Not running with the Werkzeug Server')
                 func()
+                
             if command == "status":
                 if self.verbosity_level < 1:
                     print("checking status",self.wrapped_class)
@@ -252,7 +290,25 @@ class Server(object):
                     return_value = "ERROR"
                 else:
                     return_value =  "RUNNING_"+str(type(self.wrapped_class))+"_"+self.ID
-
+            if command.startswith("add_user"):
+                print("ADDING USER")
+                admin_to_test = flask_login.current_user.id 
+                #print(admin_to_test)
+                if self.admin_user != admin_to_test and self.admin_user != "":
+                    print(admin_to_test,"is not authorized to add new users")
+                    return "no_admin_privilege"
+                user = command.split("\t")[1]
+                password = command.split("\t")[2]
+                if user in users:
+                    return "user_already_in_db"
+                else:
+                    users[user] = {"password": password}
+                if not self.reser_user_db:
+                    with open(users_file, "wb") as f:
+                        pickle.dump(users,f)
+                return "user_added"
+                
+                
             if command.startswith("initstringcode"):
                 
                 if self.verbosity_level < 1:

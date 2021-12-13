@@ -39,11 +39,19 @@ def start():
         initial_user = os.environ["FLASKCOM_INITIAL_USER"]
         initial_password = os.environ["FLASKCOM_INITIAL_PASSWORD"]
         verbosity_level = int(os.environ["FLASKCOM_VERBOSITY"])
+        admin_user = os.environ["FLASKCOM_ADMIN_USER"]
+        reser_user_db =  True if os.environ["FLASKCOM_RESET_USER_DB"] == "True" else False
         from .dummy_object import DummyObject
         wrapped_object = DummyObject()
         from .server import Server
         print("created object", wrapped_object)
-        s = Server(wrapped_object, int(port), initial_user=initial_user,initial_password=initial_password, verbosity_level=verbosity_level)   
+        s = Server(wrapped_object, 
+                   int(port), 
+                   initial_user=initial_user,
+                   initial_password=initial_password, 
+                   verbosity_level=verbosity_level,
+                   admin_user = admin_user,
+                   reser_user_db = reser_user_db)   
         print("created server",s)
         
         s.start()
